@@ -171,7 +171,9 @@ freq = Counter(filtered).most_common(10)
 }
 `;
 
-    const result = await pyodide.runPythonAsync(pythonCode);
+    const pyResult = await pyodide.runPythonAsync(pythonCode);
+    const result = pyResult.toJs({ dict_converter: Object.fromEntries });
+    pyResult.destroy(); // clean proxy
 
     document.getElementById("words").textContent = result.word_count;
     document.getElementById("unique").textContent = result.unique;
