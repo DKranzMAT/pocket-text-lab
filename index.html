@@ -1,336 +1,204 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <title>Pocket Text Lab – Python NLP in the Browser</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <meta
-    name="description"
-    content="A tiny browser-based NLP playground powered by Python via PyScript. Paste text, get instant insights."
-  />
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Pocket Text Lab – Python NLP via Pyodide</title>
 
-  <!-- Tailwind via CDN -->
-  <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Tailwind -->
+    <script src="https://cdn.tailwindcss.com"></script>
 
-  <!-- PyScript -->
-<link rel="stylesheet" href="https://pyscript.net/releases/2024.10.1/pyscript.css">
-<script defer src="https://pyscript.net/releases/2024.10.1/pyscript.js"></script>
-  <style>
-  py-script {
-    display: none;
-  }
-</style>
-
-</head>
-<body class="bg-slate-950 text-slate-100 min-h-screen">
-  <div class="max-w-5xl mx-auto px-4 py-10">
-    <!-- Header -->
-    <header class="mb-8">
-      <h1 class="text-3xl md:text-4xl font-bold tracking-tight">
-        Pocket Text Lab
-      </h1>
-      <p class="mt-2 text-slate-300 max-w-2xl">
-        A tiny NLP playground using <span class="font-semibold">Python via PyScript</span>.
-        Paste any text to explore basic stats, sentiment, and top keywords – directly in your browser.
-      </p>
-      <p class="mt-2 text-xs text-slate-500">
-        Built by David Kranz – Frontend dev experimenting with Python in the browser.
-      </p>
-    </header>
-
-    <!-- Main layout -->
-    <main class="grid md:grid-cols-2 gap-8 items-start">
-      <!-- Input card -->
-      <section class="bg-slate-900/70 border border-slate-800 rounded-xl p-4 md:p-6 shadow-lg shadow-slate-900/50">
-        <div class="flex items-center justify-between gap-2 mb-3">
-          <h2 class="font-semibold text-slate-100">Your Text</h2>
-          <div class="flex gap-2">
-            <button
-              id="sample-btn"
-              class="text-xs px-2.5 py-1.5 rounded-full border border-slate-600 hover:border-sky-400 hover:text-sky-200 transition text-slate-300"
-            >
-              Load sample text
-            </button>
-            <button
-              py-click="clear_text()"
-              class="text-xs px-2.5 py-1.5 rounded-full border border-slate-600 hover:border-rose-400 hover:text-rose-200 transition text-slate-300"
-            >
-              Clear
-            </button>
-          </div>
-        </div>
-
-        <textarea
-          id="text-input"
-          class="w-full h-52 md:h-64 text-sm bg-slate-950/80 border border-slate-800 rounded-lg px-3 py-2 text-slate-100 outline-none focus:ring-2 focus:ring-sky-500 focus:border-sky-500 resize-none"
-          placeholder="Paste or type some text here. For example: a product blurb, an email draft, or a short blog post..."
-        ></textarea>
-
-        <button
-          py-click="analyze_text()"
-          class="mt-4 inline-flex items-center justify-center gap-2 rounded-lg bg-sky-500 hover:bg-sky-400 text-slate-950 font-semibold px-4 py-2 text-sm transition w-full"
-        >
-          <span>Analyze with Python</span>
-          <span aria-hidden="true">🐍</span>
-        </button>
-
-        <p class="mt-2 text-[11px] text-slate-400">
-          All analysis runs locally in your browser using PyScript (Python compiled to WebAssembly).
-        </p>
-      </section>
-
-      <!-- Output card -->
-      <section class="bg-slate-900/70 border border-slate-800 rounded-xl p-4 md:p-6 shadow-lg shadow-slate-900/50">
-        <div class="flex items-center justify-between gap-2 mb-4">
-          <h2 class="font-semibold text-slate-100">Insights</h2>
-          <span id="analysis-status" class="text-[11px] text-slate-400">
-            Waiting for text…
-          </span>
-        </div>
-
-        <!-- Quick stats -->
-        <div class="grid grid-cols-2 gap-3 text-sm mb-5">
-          <div class="bg-slate-950/60 border border-slate-800 rounded-lg px-3 py-2.5">
-            <p class="text-[11px] uppercase tracking-wide text-slate-400">
-              Words
-            </p>
-            <p id="stat-words" class="mt-1 text-xl font-semibold">0</p>
-          </div>
-          <div class="bg-slate-950/60 border border-slate-800 rounded-lg px-3 py-2.5">
-            <p class="text-[11px] uppercase tracking-wide text-slate-400">
-              Sentences
-            </p>
-            <p id="stat-sentences" class="mt-1 text-xl font-semibold">0</p>
-          </div>
-          <div class="bg-slate-950/60 border border-slate-800 rounded-lg px-3 py-2.5">
-            <p class="text-[11px] uppercase tracking-wide text-slate-400">
-              Reading Time
-            </p>
-            <p id="stat-reading-time" class="mt-1 text-xl font-semibold">
-              0 sec
-            </p>
-          </div>
-          <div class="bg-slate-950/60 border border-slate-800 rounded-lg px-3 py-2.5">
-            <p class="text-[11px] uppercase tracking-wide text-slate-400">
-              Unique Words
-            </p>
-            <p id="stat-unique" class="mt-1 text-xl font-semibold">0</p>
-          </div>
-        </div>
-
-        <!-- Sentiment -->
-        <div class="mb-5">
-          <h3 class="text-xs font-semibold text-slate-300 tracking-wide uppercase">
-            Sentiment (very simple)
-          </h3>
-          <p id="sentiment-label" class="mt-1 text-sm">
-            —
-          </p>
-          <p id="sentiment-score" class="mt-0.5 text-[11px] text-slate-400">
-            Score: 0 (positive words – negative words)
-          </p>
-        </div>
-
-        <!-- Top words -->
-        <div>
-          <h3 class="text-xs font-semibold text-slate-300 tracking-wide uppercase mb-1.5">
-            Top Keywords
-          </h3>
-          <p class="text-[11px] text-slate-500 mb-1">
-            Stop words like "the", "and", "to" are filtered out.
-          </p>
-          <div id="keywords" class="flex flex-wrap gap-1.5 text-xs">
-            <!-- keywords chips injected by Python -->
-          </div>
-        </div>
-      </section>
-    </main>
-
-    <!-- Footer -->
-    <footer class="mt-10 border-t border-slate-800 pt-4 text-xs text-slate-500 flex flex-col md:flex-row gap-2 md:items-center md:justify-between">
-      <p>
-        Built with Python, PyScript, and Tailwind CSS. Hosted on GitHub Pages.
-      </p>
-      <p>
-        Idea: showcase Python + NLP + frontend polish in a single static page.
-      </p>
-    </footer>
-  </div>
-
-  <!-- Sample text for the "Load sample" button -->
-  <script>
-    const SAMPLE_TEXT = `
-Pocket Text Lab is a tiny browser-based playground for experimenting with text.
-It was built to showcase how Python can run directly in the browser using PyScript.
-Paste any content you like: product descriptions, marketing copy, emails, or blog posts.
-The lab computes word and sentence counts, highlights frequently used keywords, and estimates a super lightweight sentiment score.
-This project lives on GitHub Pages as part of a front-end developer portfolio.
-    `.trim();
-
-    document.addEventListener("DOMContentLoaded", () => {
-      const btn = document.getElementById("sample-btn");
-      const textarea = document.getElementById("text-input");
-      if (btn && textarea) {
-        btn.addEventListener("click", () => {
-          textarea.value = SAMPLE_TEXT;
-          // Trigger a synthetic input event for accessibility tools, etc.
-          const evt = new Event("input", { bubbles: true });
-          textarea.dispatchEvent(evt);
+    <!-- Pyodide (stable, maintained) -->
+    <script>
+        window.loadPyodidePromise = loadPyodide({
+            indexURL: "https://cdn.jsdelivr.net/pyodide/v0.26.0/full/"
         });
+    </script>
+    <script src="https://cdn.jsdelivr.net/pyodide/v0.26.0/full/pyodide.js"></script>
+
+    <style>
+      body {
+        background: #0f172a;
       }
-    });
-  </script>
-<py-config>
-  packages = ["pyodide-http"]
-</py-config>
-  <!-- Python logic via PyScript -->
-  <py-script>
+
+      /* Smooth fade-in */
+      body.loaded {
+        opacity: 1;
+        transition: opacity 0.4s ease-out;
+      }
+
+      body {
+        opacity: 0;
+      }
+    </style>
+</head>
+
+<body class="text-slate-100 min-h-screen">
+    <div class="max-w-5xl mx-auto px-4 py-10">
+
+        <h1 class="text-4xl font-bold tracking-tight mb-2">Pocket Text Lab</h1>
+        <p class="text-slate-300 max-w-2xl mb-8">
+            A tiny NLP playground using <span class="font-semibold">Python via Pyodide</span>.
+            Paste any text to explore basic stats, sentiment, and top keywords – directly in your browser.
+        </p>
+
+        <div class="grid md:grid-cols-2 gap-8">
+
+            <!-- INPUT CARD -->
+            <section class="bg-slate-900/70 border border-slate-800 rounded-xl p-6 shadow-lg">
+                <div class="flex justify-between mb-3">
+                    <h2 class="font-semibold">Your Text</h2>
+                    <div class="flex gap-2">
+                        <button id="sample" class="text-xs px-2 py-1 border border-slate-500 rounded hover:border-sky-400">Load sample</button>
+                        <button id="clear" class="text-xs px-2 py-1 border border-slate-500 rounded hover:border-rose-400">Clear</button>
+                    </div>
+                </div>
+
+                <textarea id="input" class="w-full h-56 bg-slate-950/80 border border-slate-800 rounded px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-sky-500 resize-none"></textarea>
+
+                <button id="analyze" class="w-full mt-4 bg-sky-500 hover:bg-sky-400 text-slate-900 font-semibold py-2 rounded">
+                    Analyze with Python 🐍
+                </button>
+            </section>
+
+            <!-- OUTPUT CARD -->
+            <section class="bg-slate-900/70 border border-slate-800 rounded-xl p-6 shadow-lg">
+                <div class="flex justify-between mb-4">
+                    <h2 class="font-semibold">Insights</h2>
+                    <span id="status" class="text-xs text-slate-400">Waiting…</span>
+                </div>
+
+                <div class="grid grid-cols-2 gap-3 text-sm mb-6">
+                    <div class="bg-slate-950/60 border border-slate-800 rounded px-3 py-2">
+                        <p class="text-[11px] text-slate-400 uppercase">Words</p>
+                        <p id="words" class="text-xl font-semibold">0</p>
+                    </div>
+                    <div class="bg-slate-950/60 border border-slate-800 rounded px-3 py-2">
+                        <p class="text-[11px] text-slate-400 uppercase">Sentences</p>
+                        <p id="sentences" class="text-xl font-semibold">0</p>
+                    </div>
+                    <div class="bg-slate-950/60 border border-slate-800 rounded px-3 py-2">
+                        <p class="text-[11px] text-slate-400 uppercase">Reading Time</p>
+                        <p id="reading" class="text-xl font-semibold">0 sec</p>
+                    </div>
+                    <div class="bg-slate-950/60 border border-slate-800 rounded px-3 py-2">
+                        <p class="text-[11px] text-slate-400 uppercase">Unique Words</p>
+                        <p id="unique" class="text-xl font-semibold">0</p>
+                    </div>
+                </div>
+
+                <h3 class="text-xs text-slate-300 uppercase mb-1">Sentiment</h3>
+                <p id="sentiment" class="text-sm">—</p>
+                <p id="sentiment-score" class="text-xs text-slate-400 mb-4">Score: 0</p>
+
+                <h3 class="text-xs text-slate-300 uppercase mb-1">Top Keywords</h3>
+                <div id="keywords" class="flex flex-wrap gap-1 text-xs"></div>
+            </section>
+
+        </div>
+    </div>
+
+<script>
+document.addEventListener("DOMContentLoaded", () => {
+    document.body.classList.add("loaded");
+});
+
+const SAMPLE_TEXT = `
+Pocket Text Lab is a tiny browser-based playground for experimenting with text.
+It was built to showcase how Python can run directly in the browser using Pyodide.
+Paste any content you like: product descriptions, marketing copy, emails, or blog posts.
+`;
+
+document.getElementById("sample").onclick = () => {
+    document.getElementById("input").value = SAMPLE_TEXT.trim();
+};
+document.getElementById("clear").onclick = () => {
+    document.getElementById("input").value = "";
+};
+
+// PYTHON NLP LOGIC — executed inside Pyodide
+async function analyze() {
+    const text = document.getElementById("input").value.trim();
+    const status = document.getElementById("status");
+
+    if (!text) {
+        status.textContent = "Waiting…";
+        return;
+    }
+
+    status.textContent = "Running Python…";
+
+    const pyodide = await window.loadPyodidePromise;
+
+    const pythonCode = `
 from collections import Counter
-import js
 import math
 import re
 
-# Very small, hand-rolled sentiment lexicon
-POSITIVE_WORDS = {
-    "good", "great", "excellent", "amazing", "love", "loved", "like", "helpful",
-    "nice", "positive", "enjoy", "enjoyed", "smart", "creative", "clean", "fast",
-    "simple", "clear", "efficient", "friendly"
+raw = """${text.replace(/`/g, "\\`")}"""
+
+def tokenize(t):
+    return [w for w in re.split(r"[^a-zA-Z]+", t.lower()) if w]
+
+words = tokenize(raw)
+word_count = len(words)
+unique_count = len(set(words))
+
+sentences = [s.strip() for s in re.split(r"[.!?]+", raw) if s.strip()]
+sentence_count = len(sentences)
+
+# reading time
+minutes = word_count / 200
+seconds = math.ceil(minutes * 60)
+
+positive = {"good","great","excellent","love","amazing","nice","clean","simple"}
+negative = {"bad","terrible","awful","hate","ugly","slow"}
+
+pos = sum(w in positive for w in words)
+neg = sum(w in negative for w in words)
+score = pos - neg
+
+filtered = [w for w in words if w not in {"the","and","to","a","in","of"}]
+freq = Counter(filtered).most_common(10)
+
+{
+ "word_count": word_count,
+ "unique": unique_count,
+ "sentences": sentence_count,
+ "seconds": seconds,
+ "sentiment": score,
+ "keywords": freq
 }
-NEGATIVE_WORDS = {
-    "bad", "terrible", "awful", "hate", "hated", "slow", "confusing", "buggy",
-    "broken", "negative", "frustrating", "ugly", "messy", "worst"
+`;
+
+    const result = await pyodide.runPythonAsync(pythonCode);
+
+    document.getElementById("words").textContent = result.word_count;
+    document.getElementById("unique").textContent = result.unique;
+    document.getElementById("sentences").textContent = result.sentences;
+    document.getElementById("reading").textContent = result.seconds + " sec";
+
+    document.getElementById("sentiment").textContent =
+        result.sentiment > 0 ? "Positive" :
+        result.sentiment < 0 ? "Negative" : "Neutral";
+
+    document.getElementById("sentiment-score").textContent =
+        "Score: " + result.sentiment;
+
+    const kw = document.getElementById("keywords");
+    kw.innerHTML = "";
+    result.keywords.forEach(pair => {
+        const el = document.createElement("span");
+        el.className = "px-2 py-0.5 border border-slate-700 rounded-full";
+        el.textContent = `${pair[0]} (${pair[1]})`;
+        kw.appendChild(el);
+    });
+
+    status.textContent = "Done ✓";
 }
 
-# Very tiny English stopword list
-STOPWORDS = {
-    "the", "a", "an", "and", "or", "but", "if", "in", "on", "for", "of", "to",
-    "is", "it", "this", "that", "with", "as", "by", "be", "are", "was", "were",
-    "at", "from", "so", "we", "you", "i", "they", "their", "our", "your"
-}
+document.getElementById("analyze").onclick = analyze;
+</script>
 
-def get_element(elem_id: str):
-    return js.document.getElementById(elem_id)
-
-def set_text(elem_id: str, text: str):
-    elem = get_element(elem_id)
-    if elem is not None:
-        elem.innerText = text
-
-def clear_children(elem_id: str):
-    elem = get_element(elem_id)
-    if elem is not None:
-        while elem.firstChild:
-            elem.removeChild(elem.firstChild)
-
-def create_keyword_chip(text: str, count: int):
-    elem = js.document.createElement("span")
-    elem.className = (
-        "inline-flex items-center rounded-full border border-slate-700 "
-        "px-2 py-0.5 text-[11px] bg-slate-950/80"
-    )
-    elem.innerText = f"{text} ({count})"
-    return elem
-
-def tokenize(text: str):
-    # Lowercase and split on non-letters
-    words = re.split(r"[^a-zA-Z]+", text.lower())
-    return [w for w in words if w]
-
-def count_sentences(text: str) -> int:
-    # Super rough sentence heuristic
-    sentences = re.split(r"[.!?]+", text)
-    non_empty = [s.strip() for s in sentences if s.strip()]
-    return len(non_empty)
-
-def analyze_text():
-    textarea = get_element("text-input")
-    raw_text = textarea.value.strip() if textarea is not None else ""
-
-    status_el = get_element("analysis-status")
-    if not raw_text:
-        set_text("stat-words", "0")
-        set_text("stat-sentences", "0")
-        set_text("stat-reading-time", "0 sec")
-        set_text("stat-unique", "0")
-        set_text("sentiment-label", "No text yet – paste or type something to see insights.")
-        set_text("sentiment-score", "Score: 0 (positive words – negative words)")
-        clear_children("keywords")
-        if status_el:
-            status_el.innerText = "Waiting for text…"
-        return
-
-    if status_el:
-        status_el.innerText = "Analyzing with Python…"
-
-    words = tokenize(raw_text)
-    word_count = len(words)
-    unique_count = len(set(words))
-    sentence_count = count_sentences(raw_text)
-
-    # Reading time estimate: 200 words/min
-    minutes = word_count / 200.0
-    seconds_total = math.ceil(minutes * 60)
-    if seconds_total < 60:
-        reading_label = f"{seconds_total} sec"
-    else:
-        mins = seconds_total // 60
-        secs = seconds_total % 60
-        reading_label = f"{mins} min {secs} sec"
-
-    # Sentiment
-    pos = sum(1 for w in words if w in POSITIVE_WORDS)
-    neg = sum(1 for w in words if w in NEGATIVE_WORDS)
-    score = pos - neg
-
-    if score > 1:
-        sentiment_label = "Leaning positive 🌟"
-    elif score < -1:
-        sentiment_label = "Leaning negative ⚠️"
-    else:
-        sentiment_label = "Fairly neutral ⚖️ (very rough estimate)"
-
-    # Update numeric stats
-    set_text("stat-words", str(word_count))
-    set_text("stat-sentences", str(sentence_count))
-    set_text("stat-reading-time", reading_label)
-    set_text("stat-unique", str(unique_count))
-
-    set_text("sentiment-label", sentiment_label)
-    set_text("sentiment-score", f"Score: {score} (positive words – negative words)")
-
-    # Top keywords (exclude stopwords)
-    filtered = [w for w in words if w not in STOPWORDS]
-    freq = Counter(filtered)
-    most_common = freq.most_common(10)
-
-    clear_children("keywords")
-    keywords_container = get_element("keywords")
-    if keywords_container is not None:
-        if not most_common:
-            chip = create_keyword_chip("No strong keywords", 0)
-            keywords_container.appendChild(chip)
-        else:
-            for word, count in most_common:
-                chip = create_keyword_chip(word, count)
-                keywords_container.appendChild(chip)
-
-    if status_el:
-        status_el.innerText = "Analysis complete ✅"
-
-def clear_text():
-    textarea = get_element("text-input")
-    if textarea is not None:
-        textarea.value = ""
-    set_text("stat-words", "0")
-    set_text("stat-sentences", "0")
-    set_text("stat-reading-time", "0 sec")
-    set_text("stat-unique", "0")
-    set_text("sentiment-label", "Cleared. Paste new text to analyze.")
-    set_text("sentiment-score", "Score: 0 (positive words – negative words)")
-    clear_children("keywords")
-    status_el = get_element("analysis-status")
-    if status_el:
-        status_el.innerText = "Waiting for text…"
-  </py-script>
 </body>
 </html>
